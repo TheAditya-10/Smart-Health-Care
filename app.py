@@ -1,7 +1,10 @@
-from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
+from flask import Flask, request, jsonify, render_template, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from models import *
+import openai
+
+openai.api_key = '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'
 
 app = Flask(__name__)
 app.secret_key = 'my_super_secret_key_12345'
@@ -19,13 +22,30 @@ def home():
     return render_template('index.html')
 
 def predict_disease(symptoms, weight, height):
-    # ML Model
-    return "Disease A", 0.8
-
+    prompt = f"""
+    Symptoms: {symptoms}
+    Weight: {weight} kg
+    Height: {height} cm
+    Provide the two things:
+    1. What is the probable disease that could be to this person and which type of disease is this.
+    2. What should he/she should do now ? First hand precations.
+    """
+    try:
+        response = openai.ChatCompletion.create(
+            engine = 'text-davinci-003',
+            max_tokens = 150,
+            temperature = 0.7,
+            prompt = prompt,
+        )
+        result = response.choices[0].text.strip()
+        return result.split("\n", 1)
+    except Exception as e:
+        return "Error", str(e)
 
 @app.route('/predict', methods=['GET', 'POST'])
 def predict():
     prediction = None
+    precautions = None
 
     if request.method == "POST":
         data = request.get_json()
@@ -34,24 +54,27 @@ def predict():
         weight = data.get('weight')
         height = data.get('height')
 
-        user = User.query.get(user_id)
+        user = User.session.get(user_id)
         if not user:
             return jsonify({'error': 'USER NOT FOUND'}), 404
-        
-        disease_name, probability = predict_disease(symptoms, weight, height)
-        
+                
+        disease_details = predict_disease(symptoms, weight, height)
+        if disease_details[0] == "Error":
+            return jsonify({'error' : disease_details[1]}), 500
+        disease_name, precautions = disease_details
+
         disease = Disease.query.filter_by(disease_name=disease_name).first()
         if not user:
             return jsonify({'error': 'DISEASE NOT FOUND'}), 404
         
-        prediction = DiseasePrediction(user_id=user_id, disease_id = disease.disease_id, predicted_probability = probability)
+        prediction = DiseasePrediction(user_id=user_id, disease_id = disease.disease_id, predicted_probability = 0.8)
         db.session.add(prediction)
         db.session.commit()
 
         return jsonify({
             'user_id': user_id,
             'predicted_disease': disease_name,
-            'probability': probability
+            'precautions': precautions,
         })
     return render_template('predict.html', prediction = prediction)
 
@@ -106,6 +129,8 @@ def login():
 
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password_hash, password):
+            session['user_id'] = user.user_id
+            session['username'] = user.username
             return redirect(url_for('home'))
         else:
             flash("Invalid username or password", 'danger')
