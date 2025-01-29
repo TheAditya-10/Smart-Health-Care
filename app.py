@@ -1,12 +1,12 @@
 from flask import Flask, request, jsonify, render_template, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
+from transformers import GPT2Tokenizer, GPT2LMHeadModel
 from models import *
-import openai
-
+import torch
 
 app = Flask(__name__)
-app.secret_key = 'my_super_secret_key_12345'
+app.secret_key = 'my_super_secbhbsy_secret_key_12345'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:Adi!1%40T@localhost/smart_health_care'
 #SQLALCHEMY_DATABASE_URI: Specifies the connection string to the database in the format
@@ -14,11 +14,15 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:Adi!1%40T@l
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = Flask
 #SQLALCHEMY_TRACK_MODIFICATIONS: Disables a feature that tracks object changes, improving performance.
 
-db.init_app(app)
+db = SQLAlchemy(app)
 
 @app.route('/')
 def home():
     return render_template('index.html')
+
+model_name = 'gpt2'
+tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+model = GPT2LMHeadModel.from_pretrained(model_name)
 
 def predict_disease(symptoms, weight, height):
     prompt = f"""
@@ -30,52 +34,41 @@ def predict_disease(symptoms, weight, height):
     2. What should he/she should do now ? First hand precations.
     """
     try:
-        response = openai.ChatCompletion.create(
-            engine = 'text-davinci-003',
-            max_tokens = 150,
-            temperature = 0.7,
-            prompt = prompt,
-        )
-        result = response.choices[0].text.strip()
-        return result.split("\n", 1)
+        input_ids = tokenizer.encode(prompt, return_tensors='pt')
+        output = model.generate(input_ids, max_length=200, temperature = 0.7, pad_token_id=tokenizer.eos_token_id)
+        generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
+        lines = generated_text.split('\n')
+        disease = lines[1] if len(lines) > 1 else "Unknown Disease"
+        precautions = lines[2] if len(lines) > 1 else "Unknown Precautions"
+
+        return disease.strip(), precautions.strip()
+    
     except Exception as e:
         return "Error", str(e)
 
 @app.route('/predict', methods=['GET', 'POST'])
 def predict():
-    prediction = None
-    precautions = None
-
     if request.method == "POST":
         data = request.get_json()
-        user_id = data.get('user_id')
         symptoms = data.get('symptoms')
         weight = data.get('weight')
         height = data.get('height')
 
-        user = User.session.get(user_id)
-        if not user:
-            return jsonify({'error': 'USER NOT FOUND'}), 404
-                
-        disease_details = predict_disease(symptoms, weight, height)
-        if disease_details[0] == "Error":
-            return jsonify({'error' : disease_details[1]}), 500
-        disease_name, precautions = disease_details
+        if not all([symptoms, weight, height]):
+            return jsonify({'error': 'INVALID REQUEST'}), 400
 
-        disease = Disease.query.filter_by(disease_name=disease_name).first()
-        if not user:
-            return jsonify({'error': 'DISEASE NOT FOUND'}), 404
-        
-        prediction = DiseasePrediction(user_id=user_id, disease_id = disease.disease_id, predicted_probability = 0.8)
-        db.session.add(prediction)
-        db.session.commit()
+        try:
+            disease, precautions = predict_disease(symptoms, weight, height)
+            if disease[0] == "Error":
+                return jsonify({'error': disease[1]}), 500
 
-        return jsonify({
-            'user_id': user_id,
-            'predicted_disease': disease_name,
-            'precautions': precautions,
-        })
-    return render_template('predict.html', prediction = prediction)
+            return jsonify({
+                'predicted_disease': disease,
+                'precautions': precautions,
+            })
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    return render_template('predict.html')
 
 @app.route('/register', methods = ['GET', 'POST'])
 def register():
