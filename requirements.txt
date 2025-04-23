@@ -6,4 +6,4 @@ python-dotenv==1.0.0
 langchain-google-genai==0.0.1
 pymysql==1.0.3
 gunicorn
-
+google-generativeai

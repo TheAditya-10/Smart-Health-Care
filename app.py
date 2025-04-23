@@ -5,6 +5,8 @@ from bot import predict_disease
 from flask_sqlalchemy import SQLAlchemy
 from models import *
 import os
+import pymysql
+pymysql.install_as_MySQLdb()
 
 load_dotenv()
 app = Flask(__name__)
