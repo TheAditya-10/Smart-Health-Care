@@ -1,9 +1,12 @@
+import google.generativeai as genai
 from langchain_google_genai import ChatGoogleGenerativeAI
+import os
 from dotenv import load_dotenv
 
 load_dotenv()
-
-model = ChatGoogleGenerativeAI(model = "gemini-1.5-pro")
+genai.configure(api_key = os.getenv("GOOGLE_API_KEY"))
+client = genai.GenerativeModel("gemini-1.5-pro")
+model = ChatGoogleGenerativeAI(client=client, temperature=0.5, max_output_tokens=1000)
 
 def predict_disease(symptoms, weight, height, gender, age):
     """Takes symptoms and health conditions, then predicts disease and suggests precautions."""
