@@ -8,7 +8,7 @@ from models import *
 app = Flask(__name__)
 app.secret_key = 'my_super_secbhbsy_secret_key_12345'
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:KybSIbcjiDvQNiyhkTQXLdEDCLwDLIpm@ballast.proxy.rlwy.net:19446/railway'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("MYSQL_DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
