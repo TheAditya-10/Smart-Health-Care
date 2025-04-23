@@ -1,3 +1,4 @@
 .env
 Experiments_Skilled_Based_ 4 Sem_removed (1).pdf
 __pycache__/
+*.pyc
