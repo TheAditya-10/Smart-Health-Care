@@ -1,4 +1,30 @@
+# Ignore environment files
 .env
-Experiments_Skilled_Based_ 4 Sem_removed (1).pdf
+
+# Ignore compiled Python files
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# Ignore virtual environment directories
+venv/
+env/
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore logs and temporary files
+*.log
+*.tmp
+
+# Ignore IDE-specific files
+.vscode/
+.idea/
+
+# Ignore unnecessary documents
+Experiments_Skilled_Based_ 4 Sem_removed (1).pdf
+
+# Ignore deployment files
+*.pid

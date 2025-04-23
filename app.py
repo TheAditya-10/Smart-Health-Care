@@ -8,7 +8,7 @@ from models import *
 app = Flask(__name__)
 app.secret_key = 'my_super_secbhbsy_secret_key_12345'
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:Adi!1%40T@localhost/healthcase'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:KybSIbcjiDvQNiyhkTQXLdEDCLwDLIpm@ballast.proxy.rlwy.net:19446/railway'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -126,4 +126,4 @@ def login():
     return render_template('login.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
