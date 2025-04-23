@@ -7,3 +7,6 @@ langchain-google-genai==0.0.1
 pymysql==1.0.3
 gunicorn
 google-generativeai
+langchain==0.1.13
+langchain-google-genai==0.0.8
+pydantic==2.6.4
