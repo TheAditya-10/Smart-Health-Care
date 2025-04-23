@@ -4,7 +4,9 @@ from dotenv import load_dotenv
 from bot import predict_disease
 from flask_sqlalchemy import SQLAlchemy
 from models import *
+import os
 
+load_dotenv()
 app = Flask(__name__)
 app.secret_key = 'my_super_secbhbsy_secret_key_12345'
 
