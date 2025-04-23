@@ -1,17 +1,12 @@
 document.getElementById("prediction-form").addEventListener("submit", async function(event) {
-    event.preventDefault(); // Prevent the form from submitting the default way
+    event.preventDefault(); // Prevent default form submission
 
-    // Collect the input values
-    const symptoms = document.getElementById("symptoms").value.split(",").map(symptom => symptom.trim());
-    const weight = document.getElementById("weight").value;
-    const height = document.getElementById("height").value;
+    const symptoms = document.getElementById("symptoms").value;
 
-    // Prepare the data to send
     const data = {
         symptoms: symptoms,
-        weight: parseFloat(weight),
-        height: parseFloat(height)
     };
+
     try {
         const response = await fetch("/predict", {
             method: "POST",
@@ -22,15 +17,15 @@ document.getElementById("prediction-form").addEventListener("submit", async func
         });
 
         const newdata = await response.json();
+
         if (response.ok) {
-            document.getElementById("result").innerHTML = `
-                <h3>Predicted Disease: ${newdata.generated_text}</h3>
-                
-            `;
+            const markdownText = newdata.generated_text || newdata; // In case you return string directly
+            const htmlContent = marked.parse(markdownText); // Convert markdown to HTML
+            document.getElementById("prediction-text").innerHTML = htmlContent;
         } else {
-            document.getElementById("result").innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
+            document.getElementById("prediction-text").innerHTML = `<p style="color:red;">Error: ${newdata.error}</p>`;
         }
     } catch (error) {
-        document.getElementById("result").innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
+        document.getElementById("prediction-text").innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
     }
 });

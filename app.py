@@ -1,70 +1,68 @@
 from flask import Flask, request, jsonify, render_template, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
+from dotenv import load_dotenv
+from bot import predict_disease
 from flask_sqlalchemy import SQLAlchemy
 from models import *
-import torch
 
 app = Flask(__name__)
 app.secret_key = 'my_super_secbhbsy_secret_key_12345'
 
-#app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:Adi!1%40T@localhost/smart_health_care'
-#SQLALCHEMY_DATABASE_URI: Specifies the connection string to the database in the format
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:Adi!1%40T@localhost/healthcase'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 
-#app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = Flask
-#SQLALCHEMY_TRACK_MODIFICATIONS: Disables a feature that tracks object changes, improving performance.
+class User(db.Model):
+    __tablename__ = 'users'
+    user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    username = db.Column(db.String(255), nullable=False, unique=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(255), nullable=False, unique=True)
+    full_name = db.Column(db.String(255), nullable=False)
+    age = db.Column(db.Integer, nullable=False)
+    weight = db.Column(db.Float, nullable=False)
+    height = db.Column(db.Float, nullable=False)
+    gender = db.Column(db.String(10), nullable=True)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
 
-#db = SQLAlchemy(app)
+class Symptom(db.Model):
+    __tablename__ = 'symptoms'
+    symptom_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    symptom_name = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
+
+with app.app_context():
+    db.create_all()
+
 
 @app.route('/')
 def home():
     return render_template('index.html')
-
-model_name = 'gpt2'
-# tokenizer = GPT2Tokenizer.from_pretrained(model_name)
-# model = GPT2LMHeadModel.from_pretrained(model_name)
-
-# def predict_disease(symptoms, weight, height):
-#     prompt = f"""
-#     Symptoms: {symptoms}
-#     Weight: {weight} kg
-#     Height: {height} cm
-#     Provide the two things:
-#     1. What is the probable disease that could be to this person and which type of disease is this.
-#     2. What should he/she should do now ? First hand precations.
-#     """
-#     try:
-#         input_ids = tokenizer.encode(prompt, return_tensors='pt')
-#         output = model.generate(input_ids, max_length=200, temperature = 0.7, pad_token_id=tokenizer.eos_token_id)
-#         generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
-#         #lines = generated_text.split('\n')
-#         #disease = lines # if len(lines) > 1 else "Unknown Disease"
-#         #precautions = lines #[1] if len(lines) > 1 else "Unknown Precautions"
-
-#         return generated_text
-    
-#     except Exception as e:
-#         return "Error", str(e)
 
 @app.route('/predict', methods=['GET', 'POST'])
 def predict():
     if request.method == "POST":
         data = request.get_json()
         symptoms = data.get('symptoms')
-        weight = data.get('weight')
-        height = data.get('height')
 
-        if not all([symptoms, weight, height]):
+        if not all([symptoms]):
             return jsonify({'error': 'INVALID REQUEST'}), 400
-
+        
+        if "user_id" in session:
+            user = User.query.filter_by(user_id=session['user_id']).first()
+            if user:
+                weight = user.weight
+                height = user.height
+                age = user.age
+                gender = user.gender
+            else:
+                return jsonify({'error': 'User not found'}), 404
+        print(symptoms, weight, height, age, gender)
+        precautions = predict_disease(symptoms, weight, height, gender, age)
+        print(precautions)
         try:
-            disease, precautions = predict_disease(symptoms, weight, height)
-            if disease[0] == "Error":
-                return jsonify({'error': disease[1]}), 500
-
-            return jsonify({
-                'predicted_disease': disease,
-                'precautions': precautions,
-            })
+            return jsonify({'generated_text': precautions})
+        
         except Exception as e:
             return jsonify({'error': str(e)}), 500
     return render_template('predict.html')
@@ -127,11 +125,5 @@ def login():
             flash("Invalid username or password", 'danger')
     return render_template('login.html')
 
-@app.route('/home')
-def user_home():
-    return render_template('home.html')
-
 if __name__ == '__main__':
-#    with app.app_context():
- #       db.create_all()
     app.run(debug=True)

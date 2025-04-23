@@ -1,21 +1,22 @@
-import google.generativeai as genai
+from langchain_google_genai import ChatGoogleGenerativeAI
+from dotenv import load_dotenv
 
-# Set your Google Gemini API key
-genai.configure(api_key="AIzaSyBhJnZmtfZP8j6WCosAeJebzIs3jqVZig4")
+load_dotenv()
 
-def predict_disease(symptoms, conditions):
+model = ChatGoogleGenerativeAI(model = "gemini-1.5-pro")
+
+def predict_disease(symptoms, weight, height, gender, age):
     """Takes symptoms and health conditions, then predicts disease and suggests precautions."""
-    prompt = f"I have these symptoms: {symptoms}. I also have these health conditions: {conditions}. What disease might I have? Suggest first-hand precautions."
+    prompt = f"""
+    Symptoms: {symptoms}
+    Weight: {weight} kg
+    Height: {height} cm
+    Gender: {gender}
+    Age: {age} years
+    Provide the two things:
+    1. What is the probable disease that could be to this person and which type of disease is this.
+    2. What should he/she should do now ? Give First hand precations.
+    """
+    response = model.invoke(prompt)
+    return response.content
 
-    # Use Gemini AI model
-    model = genai.GenerativeModel("gemini-pro")
-    response = model.generate_content(prompt)
-
-    return response.text  # Get response as text
-
-# Example usage
-symptoms = "fever, cough, sore throat"
-conditions = "diabetes"
-result = predict_disease(symptoms, conditions)
-
-print("AI Prediction:\n", result)
